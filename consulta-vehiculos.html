@@ -955,23 +955,57 @@
     let detectedCols = {
       placaIndex: -1,
       cuadrillaIndex: -1,
-      conductorIndex: -1,
-      modeloIndex: -1,
-      estadoIndex: -1,
-      kmIndex: -1,
-      soatIndex: -1
+      poligonoIndex: -1,
+      zonaIndex: -1,
+      anoIndex: -1,
+      soatIndex: -1,
+      soatVenceIndex: -1,
+      itvIndex: -1,
+      itvVenceIndex: -1,
+      modoIndex: -1,
+      extintorIndex: -1,
+      botiquinIndex: -1
     };
     let currentMode = 'placa'; // 'placa', 'cuadrilla', 'todos'
     let currentView = 'cards'; // 'cards', 'table'
 
-    // Datos de respaldo / ejemplo para funcionamiento sin conexión si el sheet tiene restricciones privadas
+    // Limpiador inteligente de encabezados de la hoja de vehículos
+    function cleanVehiculoHeader(h, index) {
+      if (!h) return '';
+      const str = String(h).trim();
+      const lower = str.toLowerCase();
+
+      // Descartar columnas vacías o nombres por defecto como Columna_16
+      if (lower.startsWith('columna_')) return '';
+
+      if (lower.includes('construcion de redes') && lower.includes('cuadrilla')) {
+        return 'Cuadrilla';
+      }
+      if (lower.includes('responsable del registro') && lower.includes('poligono')) {
+        return 'Polígono';
+      }
+      if (lower.includes('partner')) return 'Partner';
+      if (lower.includes('codigo')) return 'Código';
+      if (lower === 'zona') return 'Zona';
+      if (lower.includes('matricula') || lower.includes('placa')) return 'Matrícula';
+      if (lower.includes('ao') || lower.includes('ano') || lower === 'año') return 'Año';
+      if (lower === 'soat') return 'SOAT';
+      if (lower.includes('vencimento') && index < 10) return 'Vencimiento SOAT';
+      if (lower === 'itv') return 'Inspección Técnica (ITV)';
+      if (lower.includes('vencimiento') && index >= 10) return 'Vencimiento ITV';
+      if (lower.includes('version') || lower.includes('modo')) return 'Modalidad';
+      if (lower === 'extintor') return 'Extintor';
+      if (lower === 'serie') return 'Serie Extintor';
+      if (lower === 'botiquin') return 'Botiquín';
+
+      return str;
+    }
+
+    // Datos de respaldo con la misma estructura limpia
     const fallbackVehicles = [
-      { "PLACA": "BZF-812", "CUADRILLA": "CUADRILLA 01 - FIBRA", "CONDUCTOR": "Carlos Mendoza Ruiz", "VEHICULO": "Toyota Hilux 4x4", "ESTADO": "OPERATIVO", "KILOMETRAJE": "48,500 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Roberto Chacón" },
-      { "PLACA": "C4T-790", "CUADRILLA": "CUADRILLA 02 - TENDIDO", "CONDUCTOR": "Jorge Quispe Flores", "VEHICULO": "Nissan Frontier", "ESTADO": "OPERATIVO", "KILOMETRAJE": "62,100 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Roberto Chacón" },
-      { "PLACA": "A9D-903", "CUADRILLA": "CUADRILLA 03 - EMPALME", "CONDUCTOR": "Luis Ramos Salazar", "VEHICULO": "Mitsubishi L200", "ESTADO": "OPERATIVO", "KILOMETRAJE": "35,200 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Javier Morales" },
-      { "PLACA": "F1K-645", "CUADRILLA": "CUADRILLA 04 - OBRAS CIVILES", "CONDUCTOR": "Manuel Torres Castro", "VEHICULO": "Hyundai H100", "ESTADO": "MANTENIMIENTO", "KILOMETRAJE": "89,400 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Javier Morales" },
-      { "PLACA": "W3X-521", "CUADRILLA": "CUADRILLA 05 - PLANTA EXTERNA", "CONDUCTOR": "Pedro Alarcón Silva", "VEHICULO": "Toyota Hilux 4x4", "ESTADO": "OPERATIVO", "KILOMETRAJE": "41,900 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Roberto Chacón" },
-      { "PLACA": "T8B-114", "CUADRILLA": "CUADRILLA 06 - ENERGIA", "CONDUCTOR": "Andrés Gómez Parodi", "VEHICULO": "Kia K2700", "ESTADO": "OPERATIVO", "KILOMETRAJE": "74,300 km", "SOAT": "Vigente 2027", "SUPERVISOR": "Ing. Marcos Rivas" }
+      { "Partner": "M&D", "Código": "K1", "Cuadrilla": "K 1 M&D SGI ABEL ANGEL ROMANI CODOVA", "Polígono": "ESTE 1", "Zona": "Regular", "Matrícula": "BUA387", "Año": "2021", "SOAT": "SI", "Vencimiento SOAT": "15/4/2027", "Inspección Técnica (ITV)": "SI", "Vencimiento ITV": "27/2/2027", "Modalidad": "EXTERNO", "Extintor": "diciembre 2026", "Botiquín": "SI" },
+      { "Partner": "M&D", "Código": "K5", "Cuadrilla": "K 5 M&D SGI JOSE ELIAS CHAVEZ SALINAS", "Polígono": "OESTE 2", "Zona": "Regular", "Matrícula": "C8K701", "Año": "2022", "SOAT": "SI", "Vencimiento SOAT": "10/5/2027", "Inspección Técnica (ITV)": "SI", "Vencimiento ITV": "18/8/2027", "Modalidad": "INTERNO", "Extintor": "junio 2027", "Botiquín": "SI" },
+      { "Partner": "M&D", "Código": "K2", "Cuadrilla": "K 2 M&D SGI CESAR ENRIQUE BALLON", "Polígono": "SUR 1", "Zona": "Regular", "Matrícula": "A9D903", "Año": "2020", "SOAT": "SI", "Vencimiento SOAT": "12/9/2027", "Inspección Técnica (ITV)": "SI", "Vencimiento ITV": "14/10/2027", "Modalidad": "EXTERNO", "Extintor": "agosto 2026", "Botiquín": "SI" }
     ];
 
     // INICIALIZACIÓN
@@ -1017,7 +1051,6 @@
         if (!response.ok) throw new Error(`HTTP Status ${response.status}`);
         
         const rawText = await response.text();
-        // Parsear formato GViz JSON
         const jsonString = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
         const data = JSON.parse(jsonString);
 
@@ -1028,7 +1061,7 @@
         processGvizTable(data.table);
 
         alertBox.className = 'alert-banner';
-        alertText.innerHTML = `✅ <strong>Sincronización exitosa:</strong> Se extrajeron <strong>${allVehiclesData.length}</strong> registros directamente desde tu Google Sheet oficial.`;
+        alertText.innerHTML = `✅ <strong>Sincronización exitosa:</strong> Se extrajeron <strong>${allVehiclesData.length}</strong> registros de vehículos directamente desde tu Google Sheet oficial.`;
         updateSyncTime();
       } catch (err) {
         console.warn('Fallo al extraer GViz directo:', err);
@@ -1044,20 +1077,27 @@
         return;
       }
 
-      // Obtener nombres de columnas
-      let headers = [];
+      let rawHeaders = [];
       const hasLabels = table.cols && table.cols.some(c => c.label && c.label.trim() !== '');
 
       if (hasLabels) {
-        headers = table.cols.map((c, i) => (c.label && c.label.trim()) || `Columna_${i + 1}`);
+        rawHeaders = table.cols.map((c, i) => (c.label && c.label.trim()) || `Columna_${i + 1}`);
       } else {
-        // La primera fila contiene los encabezados
         const firstRow = table.rows[0];
-        headers = firstRow.c.map((cell, i) => (cell && cell.v ? String(cell.v).trim() : `Columna_${i + 1}`));
-        table.rows.shift(); // Quitar la fila de encabezados
+        rawHeaders = firstRow.c.map((cell, i) => (cell && cell.v ? String(cell.v).trim() : `Columna_${i + 1}`));
+        table.rows.shift();
       }
 
-      allHeaders = headers;
+      // Mapear solo columnas válidas con nombres limpios (excluyendo Columna_16, etc.)
+      const validCols = [];
+      rawHeaders.forEach((rawH, idx) => {
+        const cleanName = cleanVehiculoHeader(rawH, idx);
+        if (cleanName && !cleanName.toLowerCase().startsWith('columna_')) {
+          validCols.push({ idx: idx, cleanName: cleanName });
+        }
+      });
+
+      allHeaders = validCols.map(c => c.cleanName);
       allVehiclesData = [];
 
       table.rows.forEach(row => {
@@ -1065,11 +1105,15 @@
         const rowObj = {};
         let hasAnyValue = false;
 
-        headers.forEach((h, idx) => {
-          const cell = row.c[idx];
-          const val = cell && cell.f ? cell.f : (cell && cell.v !== null && cell.v !== undefined ? cell.v : '');
-          rowObj[h] = String(val).trim();
-          if (rowObj[h] !== '') hasAnyValue = true;
+        validCols.forEach(col => {
+          const cell = row.c[col.idx];
+          let val = '';
+          if (cell) {
+            val = cell.f ? cell.f : (cell.v !== null && cell.v !== undefined ? cell.v : '');
+          }
+          val = String(val).trim();
+          rowObj[col.cleanName] = val;
+          if (val !== '' && val !== 'null') hasAnyValue = true;
         });
 
         if (hasAnyValue) {
@@ -1095,7 +1139,6 @@
       const alertText = document.getElementById('statusAlertText');
 
       if (allVehiclesData.length === 0) {
-        // Usar datos demostrativos precargados
         allHeaders = Object.keys(fallbackVehicles[0]);
         allVehiclesData = fallbackVehicles;
         detectColumnRoles(allHeaders);
@@ -1121,22 +1164,39 @@
       document.getElementById('statLastUpdate').innerText = timeStr;
     }
 
-    // DETECTAR COLUMNAS CLAVE POR PALABRAS
+    // DETECTAR COLUMNAS CLAVE POR PALABRAS EXACTAS O NORMALIZADAS
     function detectColumnRoles(headers) {
-      detectedCols = { placaIndex: -1, cuadrillaIndex: -1, conductorIndex: -1, modeloIndex: -1, estadoIndex: -1, kmIndex: -1, soatIndex: -1 };
+      detectedCols = {
+        placaIndex: -1,
+        cuadrillaIndex: -1,
+        poligonoIndex: -1,
+        zonaIndex: -1,
+        anoIndex: -1,
+        soatIndex: -1,
+        soatVenceIndex: -1,
+        itvIndex: -1,
+        itvVenceIndex: -1,
+        modoIndex: -1,
+        extintorIndex: -1,
+        botiquinIndex: -1
+      };
 
       headers.forEach((h, i) => {
         const norm = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        if (norm.includes('placa') || norm.includes('matricula') || norm.includes('patente')) detectedCols.placaIndex = i;
-        else if (norm.includes('cuadrilla') || norm.includes('frente') || norm.includes('grupo') || norm.includes('equipo')) detectedCols.cuadrillaIndex = i;
-        else if (norm.includes('conductor') || norm.includes('chofer') || norm.includes('responsable') || norm.includes('personal')) detectedCols.conductorIndex = i;
-        else if (norm.includes('vehiculo') || norm.includes('modelo') || norm.includes('marca') || norm.includes('unidad') || norm.includes('tipo')) detectedCols.modeloIndex = i;
-        else if (norm.includes('estado') || norm.includes('condicion') || norm.includes('operat')) detectedCols.estadoIndex = i;
-        else if (norm.includes('km') || norm.includes('kilometraje') || norm.includes('odometro')) detectedCols.kmIndex = i;
-        else if (norm.includes('soat') || norm.includes('seguro') || norm.includes('revision')) detectedCols.soatIndex = i;
+        if (norm.includes('matricula') || norm.includes('placa')) detectedCols.placaIndex = i;
+        else if (norm === 'cuadrilla') detectedCols.cuadrillaIndex = i;
+        else if (norm === 'poligono') detectedCols.poligonoIndex = i;
+        else if (norm === 'zona') detectedCols.zonaIndex = i;
+        else if (norm === 'ano') detectedCols.anoIndex = i;
+        else if (norm === 'soat') detectedCols.soatIndex = i;
+        else if (norm.includes('soat') && norm.includes('venc')) detectedCols.soatVenceIndex = i;
+        else if (norm.includes('itv') && !norm.includes('venc')) detectedCols.itvIndex = i;
+        else if (norm.includes('itv') && norm.includes('venc')) detectedCols.itvVenceIndex = i;
+        else if (norm.includes('modalidad') || norm.includes('regimen')) detectedCols.modoIndex = i;
+        else if (norm.includes('extintor') && !norm.includes('serie')) detectedCols.extintorIndex = i;
+        else if (norm.includes('botiquin')) detectedCols.botiquinIndex = i;
       });
 
-      // Si no se detectó placa o cuadrilla, usar índices por defecto 0 y 1
       if (detectedCols.placaIndex === -1 && headers.length > 0) detectedCols.placaIndex = 0;
       if (detectedCols.cuadrillaIndex === -1 && headers.length > 1) detectedCols.cuadrillaIndex = 1;
     }
@@ -1238,7 +1298,6 @@
         if (currentMode === 'placa') {
           if (!queryPlaca) return true;
           const valPlaca = (v[placaHeader] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          // También busca en toda la fila por si la placa está en otra columna
           const fullRow = Object.values(v).join(' ').toLowerCase().replace(/[^a-z0-9]/g, '');
           return valPlaca.includes(queryPlaca) || fullRow.includes(queryPlaca);
         } else if (currentMode === 'cuadrilla') {
@@ -1283,29 +1342,33 @@
       }
     }
 
-    // VISTA DE TARJETAS
+    // VISTA DE TARJETAS (Muestra cuadrilla, polígono, zona, etc.)
     function renderCardsView(list) {
       const grid = document.getElementById('vehiclesGrid');
       grid.innerHTML = '';
 
       const placaH = allHeaders[detectedCols.placaIndex];
       const cuadrillaH = allHeaders[detectedCols.cuadrillaIndex];
-      const conductorH = allHeaders[detectedCols.conductorIndex];
-      const modeloH = allHeaders[detectedCols.modeloIndex];
-      const estadoH = allHeaders[detectedCols.estadoIndex];
-      const kmH = allHeaders[detectedCols.kmIndex];
+      const poligonoH = detectedCols.poligonoIndex >= 0 ? allHeaders[detectedCols.poligonoIndex] : null;
+      const zonaH = detectedCols.zonaIndex >= 0 ? allHeaders[detectedCols.zonaIndex] : null;
+      const anoH = detectedCols.anoIndex >= 0 ? allHeaders[detectedCols.anoIndex] : null;
+      const modoH = detectedCols.modoIndex >= 0 ? allHeaders[detectedCols.modoIndex] : null;
+      const soatH = detectedCols.soatIndex >= 0 ? allHeaders[detectedCols.soatIndex] : null;
+      const soatVenceH = detectedCols.soatVenceIndex >= 0 ? allHeaders[detectedCols.soatVenceIndex] : null;
+      const itvH = detectedCols.itvIndex >= 0 ? allHeaders[detectedCols.itvIndex] : null;
+      const itvVenceH = detectedCols.itvVenceIndex >= 0 ? allHeaders[detectedCols.itvVenceIndex] : null;
 
       list.forEach((v, index) => {
         const placa = v[placaH] || 'S/P';
         const cuadrilla = v[cuadrillaH] || 'Sin Cuadrilla Asignada';
-        const conductor = conductorH ? (v[conductorH] || 'No especificado') : '';
-        const modelo = modeloH ? (v[modeloH] || 'Vehículo Operativo') : '';
-        const estado = estadoH ? (v[estadoH] || 'Operativo') : '';
-        const km = kmH ? (v[kmH] || '--') : '';
-
-        const isTaller = estado.toLowerCase().includes('manten') || estado.toLowerCase().includes('taller') || estado.toLowerCase().includes('inop');
-        const estadoColor = isTaller ? 'var(--accent-danger)' : 'var(--accent-success)';
-        const estadoBg = isTaller ? '#fee2e2' : '#dcfce7';
+        const poligono = poligonoH ? (v[poligonoH] || '') : '';
+        const zona = zonaH ? (v[zonaH] || '') : '';
+        const ano = anoH ? (v[anoH] || '') : '';
+        const modo = modoH ? (v[modoH] || '') : '';
+        const soat = soatH ? (v[soatH] || '') : '';
+        const soatVence = soatVenceH ? (v[soatVenceH] || '') : '';
+        const itv = itvH ? (v[itvH] || '') : '';
+        const itvVence = itvVenceH ? (v[itvVenceH] || '') : '';
 
         const card = document.createElement('article');
         card.className = 'vehicle-card';
@@ -1316,41 +1379,54 @@
           </div>
 
           <div class="vehicle-card-body">
-            ${modelo ? `
+            ${poligono ? `
               <div class="info-row">
                 <span class="info-label">
-                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2 10.9 2 11.2 2 11.5V16c0 .6.4 1 1 1h2m10 0a2 2 0 100-4 2 2 0 000 4zm-10 0a2 2 0 100-4 2 2 0 000 4z"/></svg>
-                  Modelo / Unidad:
+                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                  Polígono:
                 </span>
-                <span class="info-val">${escapeHtml(modelo)}</span>
+                <span class="info-val" style="font-weight:700; color:var(--text-main);">${escapeHtml(poligono)}</span>
               </div>
             ` : ''}
 
-            ${conductor ? `
+            ${zona ? `
               <div class="info-row">
                 <span class="info-label">
-                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2m8-10a4 4 0 100-8 4 4 0 000 8z"/></svg>
-                  Conductor:
+                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                  Zona:
                 </span>
-                <span class="info-val">${escapeHtml(conductor)}</span>
+                <span class="info-val">${escapeHtml(zona)}</span>
               </div>
             ` : ''}
 
-            ${km && km !== '--' ? `
+            ${ano ? `
               <div class="info-row">
-                <span class="info-label">
-                  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  Kilometraje:
-                </span>
-                <span class="info-val">${escapeHtml(km)}</span>
+                <span class="info-label">Año:</span>
+                <span class="info-val">${escapeHtml(ano)}</span>
               </div>
             ` : ''}
 
-            ${estado ? `
+            ${modo ? `
               <div class="info-row">
-                <span class="info-label">Estado:</span>
-                <span class="info-val" style="color:${estadoColor}; background:${estadoBg}; padding:0.15rem 0.5rem; border-radius:6px; font-size:0.78rem;">
-                  ● ${escapeHtml(estado)}
+                <span class="info-label">Modalidad:</span>
+                <span class="info-val" style="background:var(--surface-subtle); padding:0.15rem 0.5rem; border-radius:6px; font-weight:600;">${escapeHtml(modo)}</span>
+              </div>
+            ` : ''}
+
+            ${soat ? `
+              <div class="info-row">
+                <span class="info-label">SOAT:</span>
+                <span class="info-val" style="color:var(--accent-success); font-weight:700;">
+                  ● ${escapeHtml(soat)} ${soatVence ? `<small style="color:var(--text-muted); font-weight:normal;">(${escapeHtml(soatVence)})</small>` : ''}
+                </span>
+              </div>
+            ` : ''}
+
+            ${itv ? `
+              <div class="info-row">
+                <span class="info-label">ITV (Técnica):</span>
+                <span class="info-val" style="color:var(--accent-success); font-weight:700;">
+                  ● ${escapeHtml(itv)} ${itvVence ? `<small style="color:var(--text-muted); font-weight:normal;">(${escapeHtml(itvVence)})</small>` : ''}
                 </span>
               </div>
             ` : ''}
@@ -1413,7 +1489,7 @@
       executeSearch();
     }
 
-    // MODAL DE DETALLE
+    // MODAL DE DETALLE COMPLETO (Sin encabezados residuales ni columnas vacías)
     function openVehicleDetail(index) {
       const v = allVehiclesData[index];
       if (!v) return;
@@ -1425,7 +1501,10 @@
 
       let html = `<div style="display:flex; flex-direction:column; gap:0.65rem;">`;
       allHeaders.forEach(h => {
-        const val = v[h] || 'No registrado';
+        if (!h || h.toLowerCase().startsWith('columna_')) return;
+        const val = v[h];
+        if (val === undefined || val === null || val === '') return; // Elimina columnas vacías
+
         html += `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:0.45rem 0; border-bottom:1px solid var(--border); font-size:0.9rem;">
             <strong style="color:var(--text-muted); max-width:40%;">${escapeHtml(h)}:</strong>

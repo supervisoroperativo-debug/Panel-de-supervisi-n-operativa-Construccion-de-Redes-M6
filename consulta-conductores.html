@@ -900,18 +900,57 @@
 
     let allDriversData = [];
     let allHeaders = [];
-    let detectedCols = { dniIndex: -1, nombreIndex: -1, cuadrillaIndex: -1, licenciaIndex: -1, categoriaIndex: -1, vencimientoIndex: -1, estadoIndex: -1, vehiculoIndex: -1 };
+    let detectedCols = {
+      nombreIndex: -1,
+      tipoDocIndex: -1,
+      dniIndex: -1,
+      cuadrillaIndex: -1,
+      licenciaIndex: -1,
+      categoriaIndex: -1,
+      vencimientoIndex: -1,
+      expedicionIndex: -1,
+      estadoIndex: -1,
+      modalidadIndex: -1
+    };
     let currentMode = 'dni';
     let currentView = 'cards';
 
-    // Datos demostrativos de respaldo (si la hoja requiere inicio de sesión)
+    // Limpiador inteligente de encabezados de la hoja de conductores
+    function cleanConductorHeader(h, index) {
+      // Col E (index 4) es Tipo de Documento (DNI/C.E)
+      if (index === 4) return 'Tipo de Documento';
+      // Col M (index 12) es Modalidad (Interno/Externo)
+      if (index === 12) return 'Modalidad';
+
+      if (!h) return '';
+      const str = String(h).trim();
+      const lower = str.toLowerCase();
+
+      // Col A (index 0) es número de fila o nombres por defecto como Columna_1
+      if (index === 0 || lower.startsWith('columna_')) return '';
+
+      // Encabezados institucionales que no deben mostrarse
+      if (lower.includes('construcion de redes') && lower.includes('ultima milla')) return '';
+      if (lower.includes('conductores autorizados del proyecto')) return '';
+
+      if (lower.includes('nombres y apellidos') || lower.includes('nombre')) return 'Nombres y Apellidos';
+      if (lower.includes('documentos') || lower === 'documento') return 'N° Documento';
+      if (lower === 'numero') return 'Licencia / Brevete';
+      if (lower.includes('cuadrilla') || lower.includes('chacon roa cuadrilla')) return 'Cuadrilla';
+      if (lower.includes('conductor')) return 'Estado Autorización';
+      if (lower.includes('expedicion')) return 'Fecha Expedición';
+      if (lower.includes('vencimiento')) return 'Vencimiento Licencia';
+      if (lower.includes('creado por') || lower.includes('version 1')) return 'Categoría Licencia';
+      if (lower.includes('centro de emicion') || lower.includes('centro de emision')) return 'Centro de Emisión';
+
+      return str;
+    }
+
+    // Datos demostrativos de respaldo limpios
     const fallbackDrivers = [
-      { "DNI": "45892147", "APELLIDOS Y NOMBRES": "Mendoza Ruiz Carlos Alberto", "CUADRILLA": "CUADRILLA 01 - FIBRA", "LICENCIA": "Q45892147", "CATEGORIA": "A-IIb", "VENCIMIENTO LICENCIA": "18/11/2028", "ESTADO": "AUTORIZADO", "VEHICULO ASIGNADO": "BZF-812" },
-      { "DNI": "71245896", "APELLIDOS Y NOMBRES": "Quispe Flores Jorge Luis", "CUADRILLA": "CUADRILLA 02 - TENDIDO", "LICENCIA": "Q71245896", "CATEGORIA": "A-IIa", "VENCIMIENTO LICENCIA": "24/05/2027", "ESTADO": "AUTORIZADO", "VEHICULO ASIGNADO": "C4T-790" },
-      { "DNI": "40215893", "APELLIDOS Y NOMBRES": "Ramos Salazar Luis Enrique", "CUADRILLA": "CUADRILLA 03 - EMPALME", "LICENCIA": "Q40215893", "CATEGORIA": "A-I", "VENCIMIENTO LICENCIA": "12/09/2027", "ESTADO": "AUTORIZADO", "VEHICULO ASIGNADO": "A9D-903" },
-      { "DNI": "46985214", "APELLIDOS Y NOMBRES": "Torres Castro Manuel Antonio", "CUADRILLA": "CUADRILLA 04 - OBRAS CIVILES", "LICENCIA": "Q46985214", "CATEGORIA": "A-IIb", "VENCIMIENTO LICENCIA": "30/12/2026", "ESTADO": "OBSERVADO", "VEHICULO ASIGNADO": "F1K-645" },
-      { "DNI": "44589632", "APELLIDOS Y NOMBRES": "Alarcón Silva Pedro Miguel", "CUADRILLA": "CUADRILLA 05 - PLANTA EXTERNA", "LICENCIA": "Q44589632", "CATEGORIA": "A-IIa", "VENCIMIENTO LICENCIA": "15/08/2028", "ESTADO": "AUTORIZADO", "VEHICULO ASIGNADO": "W3X-521" },
-      { "DNI": "48963251", "APELLIDOS Y NOMBRES": "Gómez Parodi Andrés David", "CUADRILLA": "CUADRILLA 06 - ENERGIA", "LICENCIA": "Q48963251", "CATEGORIA": "A-I", "VENCIMIENTO LICENCIA": "04/04/2028", "ESTADO": "AUTORIZADO", "VEHICULO ASIGNADO": "T8B-114" }
+      { "Nombres y Apellidos": "ARAUJO HIDALGO MANUEL FARID", "Tipo de Documento": "C.E", "N° Documento": "007652815", "Licencia / Brevete": "VM007652815", "Cuadrilla": "K33 MOTO", "Estado Autorización": "SI", "Fecha Expedición": "30/01/2025", "Vencimiento Licencia": "30/01/2030", "Categoría Licencia": "B II-B", "Modalidad": "Externo" },
+      { "Nombres y Apellidos": "ATOCHE CHAVEZ ROQUE ARMANDO", "Tipo de Documento": "DNI", "N° Documento": "72476897", "Licencia / Brevete": "Q72476897", "Cuadrilla": "Mantenimiento", "Estado Autorización": "SI", "Fecha Expedición": "30/04/2019", "Vencimiento Licencia": "30/04/2029", "Categoría Licencia": "A I", "Modalidad": "Interno" },
+      { "Nombres y Apellidos": "BALLON LAZARO CESAR ENRIQUE", "Tipo de Documento": "DNI", "N° Documento": "73993550", "Licencia / Brevete": "Q0173993550", "Cuadrilla": "K2 MOTO", "Estado Autorización": "SI", "Fecha Expedición": "06/07/2023", "Vencimiento Licencia": "06/07/2028", "Categoría Licencia": "B II-B", "Modalidad": "Externo" }
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -963,7 +1002,7 @@
         processGvizTable(data.table);
 
         alertBox.className = 'alert-banner';
-        alertText.innerHTML = `✅ <strong>Sincronización exitosa:</strong> Se extrajeron <strong>${allDriversData.length}</strong> conductores directamente desde tu Google Sheet oficial.`;
+        alertText.innerHTML = `✅ <strong>Sincronización exitosa:</strong> Se extrajeron <strong>${allDriversData.length}</strong> conductores autorizados directamente desde tu Google Sheet oficial.`;
         updateSyncTime();
       } catch (err) {
         console.warn('Fallo al extraer GViz directo de conductores:', err);
@@ -979,18 +1018,27 @@
         return;
       }
 
-      let headers = [];
+      let rawHeaders = [];
       const hasLabels = table.cols && table.cols.some(c => c.label && c.label.trim() !== '');
 
       if (hasLabels) {
-        headers = table.cols.map((c, i) => (c.label && c.label.trim()) || `Columna_${i + 1}`);
+        rawHeaders = table.cols.map((c, i) => (c.label && c.label.trim()) || `Columna_${i + 1}`);
       } else {
         const firstRow = table.rows[0];
-        headers = firstRow.c.map((cell, i) => (cell && cell.v ? String(cell.v).trim() : `Columna_${i + 1}`));
+        rawHeaders = firstRow.c.map((cell, i) => (cell && cell.v ? String(cell.v).trim() : `Columna_${i + 1}`));
         table.rows.shift();
       }
 
-      allHeaders = headers;
+      // Mapear solo columnas válidas con nombres limpios
+      const validCols = [];
+      rawHeaders.forEach((rawH, idx) => {
+        const cleanName = cleanConductorHeader(rawH, idx);
+        if (cleanName && !cleanName.toLowerCase().startsWith('columna_')) {
+          validCols.push({ idx: idx, cleanName: cleanName });
+        }
+      });
+
+      allHeaders = validCols.map(c => c.cleanName);
       allDriversData = [];
 
       table.rows.forEach(row => {
@@ -998,14 +1046,19 @@
         const rowObj = {};
         let hasAnyValue = false;
 
-        headers.forEach((h, idx) => {
-          const cell = row.c[idx];
-          const val = cell && cell.f ? cell.f : (cell && cell.v !== null && cell.v !== undefined ? cell.v : '');
-          rowObj[h] = String(val).trim();
-          if (rowObj[h] !== '') hasAnyValue = true;
+        validCols.forEach(col => {
+          const cell = row.c[col.idx];
+          let val = '';
+          if (cell) {
+            val = cell.f ? cell.f : (cell.v !== null && cell.v !== undefined ? cell.v : '');
+          }
+          val = String(val).trim();
+          rowObj[col.cleanName] = val;
+          if (val !== '' && val !== 'null') hasAnyValue = true;
         });
 
-        if (hasAnyValue) {
+        // Asegurarse de que al menos tenga nombre
+        if (hasAnyValue && (rowObj['Nombres y Apellidos'] || rowObj['N° Documento'])) {
           allDriversData.push(rowObj);
         }
       });
@@ -1053,23 +1106,35 @@
     }
 
     function detectColumnRoles(headers) {
-      detectedCols = { dniIndex: -1, nombreIndex: -1, cuadrillaIndex: -1, licenciaIndex: -1, categoriaIndex: -1, vencimientoIndex: -1, estadoIndex: -1, vehiculoIndex: -1 };
+      detectedCols = {
+        nombreIndex: -1,
+        tipoDocIndex: -1,
+        dniIndex: -1,
+        cuadrillaIndex: -1,
+        licenciaIndex: -1,
+        categoriaIndex: -1,
+        vencimientoIndex: -1,
+        expedicionIndex: -1,
+        estadoIndex: -1,
+        modalidadIndex: -1
+      };
 
       headers.forEach((h, i) => {
         const norm = h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        if (norm.includes('dni') || norm.includes('documento') || norm.includes('identidad')) detectedCols.dniIndex = i;
-        else if (norm.includes('nombre') || norm.includes('apellido') || norm.includes('conductor') || norm.includes('chofer')) detectedCols.nombreIndex = i;
-        else if (norm.includes('cuadrilla') || norm.includes('frente') || norm.includes('equipo')) detectedCols.cuadrillaIndex = i;
+        if (norm.includes('nombre') || norm.includes('apellido')) detectedCols.nombreIndex = i;
+        else if (norm.includes('tipo de documento')) detectedCols.tipoDocIndex = i;
+        else if (norm.includes('documento') || norm.includes('dni')) detectedCols.dniIndex = i;
+        else if (norm === 'cuadrilla' || norm.includes('cuadrilla')) detectedCols.cuadrillaIndex = i;
         else if (norm.includes('licencia') || norm.includes('brevete')) detectedCols.licenciaIndex = i;
-        else if (norm.includes('categoria') || norm.includes('clase')) detectedCols.categoriaIndex = i;
-        else if (norm.includes('vencimiento') || norm.includes('vigencia')) detectedCols.vencimientoIndex = i;
-        else if (norm.includes('estado') || norm.includes('habilit') || norm.includes('autoriz')) detectedCols.estadoIndex = i;
-        else if (norm.includes('vehiculo') || norm.includes('placa') || norm.includes('unidad')) detectedCols.vehiculoIndex = i;
+        else if (norm.includes('categoria')) detectedCols.categoriaIndex = i;
+        else if (norm.includes('vencimiento')) detectedCols.vencimientoIndex = i;
+        else if (norm.includes('expedicion')) detectedCols.expedicionIndex = i;
+        else if (norm.includes('autorizacion') || norm.includes('estado')) detectedCols.estadoIndex = i;
+        else if (norm.includes('modalidad') || norm.includes('condicion')) detectedCols.modalidadIndex = i;
       });
 
-      if (detectedCols.dniIndex === -1 && headers.length > 0) detectedCols.dniIndex = 0;
-      if (detectedCols.nombreIndex === -1 && headers.length > 1) detectedCols.nombreIndex = 1;
-      if (detectedCols.cuadrillaIndex === -1 && headers.length > 2) detectedCols.cuadrillaIndex = 2;
+      if (detectedCols.nombreIndex === -1 && headers.length > 0) detectedCols.nombreIndex = 0;
+      if (detectedCols.dniIndex === -1 && headers.length > 1) detectedCols.dniIndex = 1;
     }
 
     function populateCuadrillasDropdown() {
@@ -1100,7 +1165,7 @@
       let habCount = 0;
       allDriversData.forEach(d => {
         const val = (d[estadoH] || '').toLowerCase();
-        if (val.includes('aut') || val.includes('hab') || val.includes('vig') || val.includes('ok')) habCount++;
+        if (val.includes('si') || val.includes('aut') || val.includes('hab') || val.includes('vig') || val.includes('ok')) habCount++;
       });
       document.getElementById('statHabilitados').innerText = habCount > 0 ? habCount : allDriversData.length;
     }
@@ -1199,35 +1264,37 @@
       const grid = document.getElementById('driversGrid');
       grid.innerHTML = '';
 
-      const dniH = allHeaders[detectedCols.dniIndex];
       const nombreH = allHeaders[detectedCols.nombreIndex];
-      const cuadrillaH = allHeaders[detectedCols.cuadrillaIndex];
-      const licenciaH = allHeaders[detectedCols.licenciaIndex];
-      const categoriaH = allHeaders[detectedCols.categoriaIndex];
-      const vencimientoH = allHeaders[detectedCols.vencimientoIndex];
-      const estadoH = allHeaders[detectedCols.estadoIndex];
-      const vehiculoH = allHeaders[detectedCols.vehiculoIndex];
+      const tipoDocH = detectedCols.tipoDocIndex >= 0 ? allHeaders[detectedCols.tipoDocIndex] : null;
+      const dniH = detectedCols.dniIndex >= 0 ? allHeaders[detectedCols.dniIndex] : null;
+      const cuadrillaH = detectedCols.cuadrillaIndex >= 0 ? allHeaders[detectedCols.cuadrillaIndex] : null;
+      const licenciaH = detectedCols.licenciaIndex >= 0 ? allHeaders[detectedCols.licenciaIndex] : null;
+      const categoriaH = detectedCols.categoriaIndex >= 0 ? allHeaders[detectedCols.categoriaIndex] : null;
+      const vencimientoH = detectedCols.vencimientoIndex >= 0 ? allHeaders[detectedCols.vencimientoIndex] : null;
+      const estadoH = detectedCols.estadoIndex >= 0 ? allHeaders[detectedCols.estadoIndex] : null;
+      const modalidadH = detectedCols.modalidadIndex >= 0 ? allHeaders[detectedCols.modalidadIndex] : null;
 
       list.forEach(d => {
-        const dni = d[dniH] || 'S/DNI';
         const nombre = d[nombreH] || 'Conductor Autorizado';
-        const cuadrilla = cuadrillaH ? (d[cuadrillaH] || 'General') : '';
-        const licencia = licenciaH ? (d[licenciaH] || dni) : '';
-        const categoria = categoriaH ? (d[categoriaH] || 'A-I') : '';
-        const vencimiento = vencimientoH ? (d[vencimientoH] || 'Vigente') : '';
-        const estado = estadoH ? (d[estadoH] || 'AUTORIZADO') : 'AUTORIZADO';
-        const vehiculo = vehiculoH ? (d[vehiculoH] || '') : '';
+        const tipoDoc = tipoDocH ? (d[tipoDocH] || 'DOC') : 'DOC';
+        const dni = dniH ? (d[dniH] || 'S/N') : 'S/N';
+        const cuadrilla = cuadrillaH ? (d[cuadrillaH] || '') : '';
+        const licencia = licenciaH ? (d[licenciaH] || '') : '';
+        const categoria = categoriaH ? (d[categoriaH] || '') : '';
+        const vencimiento = vencimientoH ? (d[vencimientoH] || '') : '';
+        const rawEstado = estadoH ? (d[estadoH] || '') : 'SI';
+        const modalidad = modalidadH ? (d[modalidadH] || '') : '';
 
-        const isVencido = estado.toLowerCase().includes('venc') || estado.toLowerCase().includes('inhab') || estado.toLowerCase().includes('no');
-        const isObservado = estado.toLowerCase().includes('obs') || estado.toLowerCase().includes('pend');
-        const badgeClass = isVencido ? 'danger' : (isObservado ? 'warning' : 'active');
+        const isAuth = rawEstado.toLowerCase().includes('si') || rawEstado.toLowerCase().includes('aut');
+        const badgeClass = isAuth ? 'active' : 'danger';
+        const badgeText = isAuth ? '● AUTORIZADO' : '● NO AUTORIZADO';
 
         const card = document.createElement('article');
         card.className = 'driver-card';
         card.innerHTML = `
           <div class="driver-card-header">
-            <span class="dni-badge">DNI: ${escapeHtml(dni)}</span>
-            <span class="status-badge ${badgeClass}">● ${escapeHtml(estado)}</span>
+            <span class="dni-badge">${escapeHtml(tipoDoc)}: ${escapeHtml(dni)}</span>
+            <span class="status-badge ${badgeClass}">${badgeText}</span>
           </div>
 
           <div class="driver-card-body">
@@ -1239,14 +1306,14 @@
                   <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
                   Cuadrilla:
                 </span>
-                <span class="info-val" style="color:var(--color-sheets);">${escapeHtml(cuadrilla)}</span>
+                <span class="info-val" style="color:var(--color-sheets); font-weight:700;">${escapeHtml(cuadrilla)}</span>
               </div>
             ` : ''}
 
             ${licencia ? `
               <div class="info-row">
                 <span class="info-label">Brevete MTC:</span>
-                <span class="info-val">${escapeHtml(licencia)} ${categoria ? `(${escapeHtml(categoria)})` : ''}</span>
+                <span class="info-val" style="font-family:monospace; font-weight:700;">${escapeHtml(licencia)} ${categoria ? `<span style="font-size:0.78rem; color:var(--text-muted); font-family:inherit;">(${escapeHtml(categoria)})</span>` : ''}</span>
               </div>
             ` : ''}
 
@@ -1257,10 +1324,10 @@
               </div>
             ` : ''}
 
-            ${vehiculo ? `
+            ${modalidad ? `
               <div class="info-row">
-                <span class="info-label">Vehículo Asignado:</span>
-                <span class="info-val" style="background:#0f172a; color:#fbbf24; padding:0.15rem 0.5rem; border-radius:6px; font-family:monospace;">${escapeHtml(vehiculo)}</span>
+                <span class="info-label">Modalidad:</span>
+                <span class="info-val" style="background:var(--surface-subtle); padding:0.12rem 0.45rem; border-radius:5px; font-weight:600;">${escapeHtml(modalidad)}</span>
               </div>
             ` : ''}
           </div>
@@ -1320,6 +1387,7 @@
       executeSearch();
     }
 
+    // FICHA DETALLADA DEL CONDUCTOR (Sin encabezados residuales ni columnas vacías)
     function openDriverDetail(index) {
       const d = allDriversData[index];
       if (!d) return;
@@ -1331,7 +1399,10 @@
 
       let html = `<div style="display:flex; flex-direction:column; gap:0.65rem;">`;
       allHeaders.forEach(h => {
-        const val = d[h] || 'No registrado';
+        if (!h || h.toLowerCase().startsWith('columna_')) return;
+        const val = d[h];
+        if (val === undefined || val === null || val === '') return; // Omite campos vacíos
+
         html += `
           <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:0.45rem 0; border-bottom:1px solid var(--border); font-size:0.9rem;">
             <strong style="color:var(--text-muted); max-width:40%;">${escapeHtml(h)}:</strong>

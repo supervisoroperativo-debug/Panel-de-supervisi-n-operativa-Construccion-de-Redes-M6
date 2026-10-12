@@ -669,16 +669,21 @@
 
     <!-- ADMIN UPLOAD AREA (LOCKED BEHIND ADMIN PASSWORD) -->
     <section class="admin-panel-card" id="adminPanelCard">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:0.75rem; flex-wrap:wrap; gap:0.75rem;">
         <div>
           <h2 style="font-size:1.25rem; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
             <span>🛡️ Panel del Administrador: Subida y Extracción de Pólizas SCTR</span>
           </h2>
           <p style="font-size:0.84rem; color:var(--text-muted); margin-top:0.25rem;">
-            Sube el archivo PDF oficial del SCTR emitido por la aseguradora (La Positiva, Rímac, Pacífico, Mapfre). El sistema extraerá la lista de técnicos, DNI y vigencia automáticamente.
+            Sube las pólizas en PDF emitidas por la aseguradora (Sanitas, Protecta, Crecer, La Positiva, Rímac, etc.). El sistema extraerá los técnicos, DNI/CE y vigencia automáticamente.
           </p>
         </div>
-        <button class="btn-clear" onclick="closeAdminSession()" style="padding:0.4rem 0.8rem; font-size:0.8rem;">Cerrar Sesión Admin</button>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn-clear" onclick="clearAllSctrDatabase()" style="padding:0.45rem 0.85rem; font-size:0.82rem; color:#ef4444; border-color:#fca5a5; background:#fff1f2; font-weight:700;" title="Borrar todos los nombres de la base de datos para comenzar el nuevo mes">
+            🗑️ Vaciar Base de Datos SCTR
+          </button>
+          <button type="button" class="btn-clear" onclick="closeAdminSession()" style="padding:0.45rem 0.85rem; font-size:0.82rem;">Cerrar Sesión Admin</button>
+        </div>
       </div>
 
       <!-- METADATA FORM -->
@@ -781,13 +786,13 @@
         <h2>
           <span>🔍 Consultar Cobertura SCTR de Técnico</span>
         </h2>
-        <span style="font-size:0.82rem; color:var(--text-muted);">Ingresa el DNI o Apellidos del técnico para validar si está asegurado</span>
+        <span style="font-size:0.82rem; color:var(--text-muted);">Ingresa DNI, Carnet de Extranjería (CE) o Apellidos para validar si está asegurado</span>
       </div>
 
       <div class="search-inputs-area">
         <div class="input-wrapper">
           <svg class="input-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="inputSearchSctr" class="main-input" placeholder="Ingresa DNI (8 dígitos) o Apellidos y Nombres..." oninput="handleSearchInput()" autocomplete="off" />
+          <input type="text" id="inputSearchSctr" class="main-input" placeholder="Ingresa DNI, Carnet de Extranjería (CE) o Apellidos y Nombres..." oninput="handleSearchInput()" autocomplete="off" />
         </div>
         <button class="btn-search" onclick="executeSctrSearch()">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -834,25 +839,31 @@
 
     <!-- COMPLETE ROSTER / TABLE VIEW -->
     <section>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.6rem;">
         <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-main);">
-          Nómina General de Técnicos Asegurados
+          Nómina General de Personal Asegurado (SCTR)
         </h3>
-        <span class="status-badge active" id="badgeGeneralCount">0 registrados</span>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+          <span class="status-badge active" id="badgeGeneralCount">0 registrados</span>
+          <button type="button" class="btn-clear" onclick="clearAllSctrDatabase()" style="padding:0.3rem 0.65rem; font-size:0.78rem; color:#ef4444; border-color:#fca5a5; font-weight:700;" title="Vaciar toda la nómina para cargar un nuevo mes">
+            🗑️ Limpiar Todo
+          </button>
+        </div>
       </div>
 
       <div class="table-responsive">
         <table class="data-table">
           <thead>
             <tr>
-              <th>DNI</th>
+              <th>DNI / CE</th>
               <th>Apellidos y Nombres</th>
-              <th>Cargo / Ocupación</th>
+              <th>Empresa / Sede</th>
               <th>Aseguradora</th>
               <th>N° Póliza</th>
               <th>Vigencia SCTR</th>
               <th>Estado</th>
               <th style="text-align:center;">Descargar PDF</th>
+              <th style="text-align:center; width:70px;">Acción</th>
             </tr>
           </thead>
           <tbody id="tbodyGeneralRoster"></tbody>
@@ -1005,23 +1016,26 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    // BASE DE DATOS INICIAL DE TÉCNICOS SCTR (M&D Redes)
-    const initialSctrDatabase = [
-      { dni: "45892147", nombres: "MENDOZA RUIZ CARLOS ALBERTO", cargo: "TÉCNICO EMPALMADOR DE FIBRA", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "71245896", nombres: "QUISPE FLORES JORGE LUIS", cargo: "TÉCNICO LINIERO / TENDIDO", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "40215893", nombres: "RAMOS SALAZAR LUIS ENRIQUE", cargo: "TÉCNICO DE REDES Y ENERGÍA", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "46985214", nombres: "TORRES CASTRO MANUEL ANTONIO", cargo: "TÉCNICO DE PLANTA EXTERNA", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "44589632", nombres: "ALARCÓN SILVA PEDRO MIGUEL", cargo: "SUPERVISOR DE OPERACIONES", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "48963251", nombres: "GÓMEZ PARODI ANDRÉS DAVID", cargo: "TÉCNICO EMPALMADOR", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" },
-      { dni: "73214589", nombres: "CHACÓN BUSTAMANTE ROBERTO", cargo: "INGENIERO RESIDENTE DE REDES", aseguradora: "La Positiva Seguros", poliza: "POL-SCTR-84920-MD", desde: "2026-10-01", hasta: "2026-10-31", pdfId: "default" }
-    ];
+    // BASE DE DATOS INICIAL DE TÉCNICOS SCTR (Limpia para el mes operativo)
+    const initialSctrDatabase = [];
+
+    // Lista de DNIs de ejemplo para purgar cualquier residuo de pruebas
+    const MOCK_DNIS = new Set(["45892147", "71245896", "40215893", "46985214", "44589632", "48963251", "73214589"]);
+
+    function filterOutMockData(list) {
+      if (!Array.isArray(list)) return [];
+      return list.filter(w => !MOCK_DNIS.has(w.dni));
+    }
 
     // INICIALIZACIÓN
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       const savedTheme = localStorage.getItem('md_panel_theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
 
-      // Cargar base de datos local
+      // Inicializar IndexedDB tempranamente
+      await initIndexedDB();
+
+      // Cargar base de datos local y purgar cualquier dato de ejemplo
       loadSctrDatabase();
 
       // Fechas por defecto en admin (mes actual)
@@ -1039,24 +1053,70 @@
       const stored = localStorage.getItem('md_sctr_workers');
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          const cleaned = filterOutMockData(parsed);
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('md_sctr_workers', JSON.stringify(cleaned));
+          }
+          return cleaned;
         } catch (e) {
-          return initialSctrDatabase;
+          return [];
         }
       }
-      return initialSctrDatabase;
+      return [];
     }
 
     function saveSctrDatabase(list) {
-      localStorage.setItem('md_sctr_workers', JSON.stringify(list));
-      renderRosterTable(list);
+      const cleaned = filterOutMockData(list);
+      localStorage.setItem('md_sctr_workers', JSON.stringify(cleaned));
+      renderRosterTable(cleaned);
       renderStats();
     }
 
     function loadSctrDatabase() {
-      if (!localStorage.getItem('md_sctr_workers')) {
-        saveSctrDatabase(initialSctrDatabase);
+      const db = getSctrDatabase();
+      localStorage.setItem('md_sctr_workers', JSON.stringify(db));
+    }
+
+    // VACIAR Y LIMPIAR TODA LA BASE DE DATOS DE TÉCNICOS SCTR
+    function clearAllSctrDatabase() {
+      const currentList = getSctrDatabase();
+      if (currentList.length === 0) {
+        showToast('La nómina ya se encuentra vacía.');
+        return;
       }
+
+      const confirmMsg = `⚠️ ¿Estás seguro de que deseas eliminar TODOS los ${currentList.length} técnicos registrados en la nómina SCTR?\n\nEsta acción borrará todos los registros actuales para que puedas subir las pólizas del nuevo mes desde cero.`;
+      if (!confirm(confirmMsg)) return;
+
+      localStorage.setItem('md_sctr_workers', JSON.stringify([]));
+      renderRosterTable([]);
+      renderStats();
+
+      // Limpiar también búsquedas y previsualizaciones activas
+      document.getElementById('sctrResultsContainer').innerHTML = '';
+      const inputSearch = document.getElementById('inputSearchSctr');
+      if (inputSearch) inputSearch.value = '';
+
+      showToast('¡Nómina SCTR vaciada completamente! Lista para cargar el nuevo mes.');
+    }
+
+    // ELIMINAR UN TÉCNICO ESPECÍFICO DE LA NÓMINA (PARA DEPURAR MES A MES)
+    function deleteWorkerFromRoster(dni, nombres) {
+      const confirmDelete = confirm(`¿Deseas eliminar a ${nombres} (${dni}) de la nómina de SCTR?`);
+      if (!confirmDelete) return;
+
+      const currentList = getSctrDatabase();
+      const updatedList = currentList.filter(t => t.dni !== dni);
+      saveSctrDatabase(updatedList);
+
+      // Si había una búsqueda activa, refrescarla
+      const searchVal = document.getElementById('inputSearchSctr').value.trim();
+      if (searchVal) {
+        executeSctrSearch();
+      }
+
+      showToast(`Técnico ${nombres} eliminado de la nómina.`);
     }
 
     // ESTADÍSTICAS
@@ -1167,6 +1227,8 @@
           badgeClass = 'warning';
         }
 
+        const docPrefix = t.tipoDoc || (/^(?:00|\d{9,})/.test(t.dni) ? 'CE' : 'DNI');
+
         const card = document.createElement('div');
         card.className = `sctr-card ${statusClass}`;
         card.innerHTML = `
@@ -1180,8 +1242,8 @@
 
           <div class="sctr-card-body">
             <div class="field-block">
-              <span class="field-label">Documento DNI:</span>
-              <span class="field-value" style="font-family:monospace; color:var(--primary); font-size:1.2rem;">${escapeHtml(t.dni)}</span>
+              <span class="field-label">Documento (${docPrefix}):</span>
+              <span class="field-value" style="font-family:monospace; color:var(--primary); font-size:1.2rem;">${docPrefix} - ${escapeHtml(t.dni)}</span>
             </div>
 
             <div class="field-block">
@@ -1191,12 +1253,12 @@
 
             <div class="field-block">
               <span class="field-label">Compañía Aseguradora:</span>
-              <span class="field-value">${escapeHtml(t.aseguradora || 'La Positiva Seguros')}</span>
+              <span class="field-value">${escapeHtml(t.aseguradora || 'Sanitas EPS / Protecta')}</span>
             </div>
 
             <div class="field-block">
               <span class="field-label">N° de Póliza SCTR:</span>
-              <span class="field-value" style="font-family:monospace;">${escapeHtml(t.poliza || 'POL-SCTR-MD')}</span>
+              <span class="field-value" style="font-family:monospace;">${escapeHtml(t.poliza || 'POL-SCTR')}</span>
             </div>
 
             <div class="field-block">
@@ -1206,7 +1268,7 @@
 
             <div class="field-block">
               <span class="field-label">Empresa Contratista:</span>
-              <span class="field-value">M&amp;D CONSTRUCCIÓN DE REDES S.A.C.</span>
+              <span class="field-value">${escapeHtml(t.empresa || 'M&D CONSTRUCCIÓN DE REDES S.A.C.')}</span>
             </div>
           </div>
 
@@ -1214,16 +1276,22 @@
             <span style="font-size:0.84rem; color:var(--text-muted);">
               ✅ Cobertura validada conforme a la Ley N° 26790 y D.S. 003-98-SA para trabajos de alto riesgo en redes.
             </span>
-            ${(() => {
-              const docCount = (t.documents && t.documents.length > 0) ? t.documents.length : (t.pdfId && t.pdfId !== 'default' ? 1 : 0);
-              const label = docCount > 1 ? `Descargar Pólizas (${docCount} PDFs)` : 'Descargar Certificado SCTR (PDF)';
-              return `
-                <button class="btn-download-pdf" onclick="downloadSctrPdf('${escapeHtml(t.dni)}', '${escapeHtml(t.nombres)}', '${escapeHtml(t.pdfId || 'default')}')">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                  ${label}
-                </button>
-              `;
-            })()}
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              ${(() => {
+                const docCount = (t.documents && t.documents.length > 0) ? t.documents.length : (t.pdfId && t.pdfId !== 'default' ? 1 : 0);
+                const label = docCount > 1 ? `Descargar Pólizas (${docCount} PDFs)` : 'Descargar Certificado SCTR (PDF)';
+                return `
+                  <button class="btn-download-pdf" onclick="downloadSctrPdf('${escapeHtml(t.dni)}', '${escapeHtml(t.nombres)}', '${escapeHtml(t.pdfId || 'default')}')">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    ${label}
+                  </button>
+                `;
+              })()}
+              <button class="btn-clear" style="padding:0.55rem 0.85rem; font-size:0.8rem; font-weight:700; color:#ef4444; border-color:#fca5a5; display:inline-flex; align-items:center; gap:0.35rem;" onclick="deleteWorkerFromRoster('${escapeHtml(t.dni)}', '${escapeHtml(t.nombres)}')" title="Eliminar de la nómina mensual">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Eliminar
+              </button>
+            </div>
           </div>
         `;
         container.appendChild(card);
@@ -1243,12 +1311,13 @@
         const badgeText = isExpired ? 'VENCIDO' : 'VIGENTE';
         const docCount = (t.documents && t.documents.length > 0) ? t.documents.length : (t.pdfId && t.pdfId !== 'default' ? 1 : 0);
         const badgeDocText = docCount > 1 ? `📥 ${docCount} PDFs` : '📥 PDF';
+        const docPrefix = t.tipoDoc || (/^(?:00|\d{9,})/.test(t.dni) ? 'CE' : 'DNI');
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-family:monospace; font-weight:800; color:var(--primary);">${escapeHtml(t.dni)}</td>
+          <td style="font-family:monospace; font-weight:800; color:var(--primary);">${escapeHtml(docPrefix)}: ${escapeHtml(t.dni)}</td>
           <td style="font-weight:700;">${escapeHtml(t.nombres)}</td>
-          <td>${escapeHtml(t.cargo || 'Técnico')}</td>
+          <td>${escapeHtml(t.empresa || t.cargo || 'Redes M&D')}</td>
           <td>${escapeHtml(t.aseguradora || 'La Positiva')}</td>
           <td style="font-family:monospace;">${escapeHtml(t.poliza || '-')}</td>
           <td>${formatDateStr(t.desde)} al ${formatDateStr(t.hasta)}</td>
@@ -1256,6 +1325,11 @@
           <td style="text-align:center;">
             <button class="btn-clear" style="padding:0.35rem 0.65rem; font-size:0.76rem; font-weight:700; color:var(--primary);" onclick="downloadSctrPdf('${escapeHtml(t.dni)}', '${escapeHtml(t.nombres)}', '${escapeHtml(t.pdfId || 'default')}')">
               ${badgeDocText}
+            </button>
+          </td>
+          <td style="text-align:center;">
+            <button type="button" class="btn-clear" style="padding:0.25rem 0.5rem; font-size:0.76rem; color:#ef4444; border-color:#fca5a5; font-weight:700;" onclick="deleteWorkerFromRoster('${escapeHtml(t.dni)}', '${escapeHtml(t.nombres)}')" title="Eliminar de la nómina mensual">
+              🗑️
             </button>
           </td>
         `;
@@ -1578,175 +1652,293 @@
       }, 400);
     }
 
-    // PROCESAR UN ARCHIVO PDF INDIVIDUAL CON PDF.JS
-    async function processSinglePdf(file, index) {
-      const fileId = `pol_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 7)}`;
-
+    function fileToDataURL(file) {
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onload = async function(e) {
-          const arrayBuffer = e.target.result;
-
-          // Guardar DataURL en IndexedDB para descarga posterior
-          let dataUrl = '';
-          try {
-            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-            dataUrl = await blobToDataURL(blob);
-            await savePdfToDB(fileId, dataUrl);
-          } catch (storageErr) {
-            console.warn('Storage save warning:', storageErr);
-          }
-
-          let fullText = '';
-          try {
-            if (window.pdfjsLib) {
-              const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += ' ' + pageText;
-              }
-            }
-          } catch (pdfErr) {
-            console.warn('PDF.js text parse warning:', pdfErr);
-          }
-
-          const extractedMeta = extractMetaAndWorkersFromText(fullText, file.name, fileId);
-
-          resolve({
-            id: fileId,
-            file: file,
-            name: file.name,
-            size: file.size,
-            dataUrl: dataUrl,
-            extractedCount: extractedMeta.workers.length,
-            insurer: extractedMeta.insurer,
-            policy: extractedMeta.policy,
-            desde: extractedMeta.desde,
-            hasta: extractedMeta.hasta,
-            workers: extractedMeta.workers
-          });
-        };
-
-        reader.onerror = () => {
-          resolve({
-            id: fileId,
-            file: file,
-            name: file.name,
-            size: file.size,
-            dataUrl: '',
-            extractedCount: 0,
-            insurer: document.getElementById('adminAseguradora').value || 'La Positiva Seguros',
-            policy: document.getElementById('adminPoliza').value || 'POL-SCTR-MD',
-            desde: document.getElementById('adminVigenciaDesde').value,
-            hasta: document.getElementById('adminVigenciaHasta').value,
-            workers: []
-          });
-        };
-
-        reader.readAsArrayBuffer(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
       });
     }
 
-    // EXTRACCIÓN INTELIGENTE DE TEXTO DEL PDF
-    function extractMetaAndWorkersFromText(text, filename, fileId) {
-      let insurer = document.getElementById('adminAseguradora').value || 'La Positiva Seguros';
-      let policy = document.getElementById('adminPoliza').value || 'POL-SCTR-MD';
-      let desde = document.getElementById('adminVigenciaDesde').value || new Date().toISOString().split('T')[0];
-      let hasta = document.getElementById('adminVigenciaHasta').value || new Date().toISOString().split('T')[0];
+    // RECONSTRUCCIÓN ESPACIAL DE LÍNEAS POR COORDENADAS (PDF.JS)
+    function extractLinesFromPage(textContent) {
+      if (!textContent || !textContent.items || textContent.items.length === 0) return [];
 
-      // Detectar Aseguradora en el contenido del archivo
-      if (text.match(/positiva/i)) insurer = 'La Positiva Seguros';
-      else if (text.match(/rimac|rímac/i)) insurer = 'Rímac Seguros';
-      else if (text.match(/pacifico|pacífico/i)) insurer = 'Pacífico Seguros';
-      else if (text.match(/mapfre/i)) insurer = 'Mapfre Perú';
-      else if (text.match(/sanitas/i)) insurer = 'Sanitas Perú';
+      const validItems = textContent.items.filter(it => it.str && it.str.trim().length > 0);
+      if (validItems.length === 0) return [];
 
-      // Detectar N° de Póliza
-      const polizaMatch = text.match(/p[oó]liza\s*(?:n[°o.]*)?\s*[:\s]*([0-9A-Z\-]{5,25})/i);
-      if (polizaMatch && polizaMatch[1]) {
-        policy = polizaMatch[1].trim();
+      // En el sistema de coordenadas de PDF, Y crece de abajo hacia arriba.
+      // Ordenamos Y de mayor a menor (arriba hacia abajo).
+      // Tolerancia vertical: 3.8 puntos para agrupar elementos en la misma línea visual.
+      validItems.sort((a, b) => {
+        const dy = b.transform[5] - a.transform[5];
+        if (Math.abs(dy) > 3.8) return dy;
+        return a.transform[4] - b.transform[4]; // X de izquierda a derecha
+      });
+
+      const lines = [];
+      let currentLineItems = [];
+      let currentLineY = null;
+
+      for (const item of validItems) {
+        const y = item.transform[5];
+        if (currentLineY === null || Math.abs(currentLineY - y) <= 3.8) {
+          currentLineItems.push(item);
+          if (currentLineY === null) currentLineY = y;
+        } else {
+          currentLineItems.sort((a, b) => a.transform[4] - b.transform[4]);
+          lines.push(currentLineItems.map(it => it.str.trim()).join(' ').trim());
+          currentLineItems = [item];
+          currentLineY = y;
+        }
       }
 
-      // Detectar fechas de vigencia
-      const dateMatches = text.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})/g);
-      if (dateMatches && dateMatches.length >= 2) {
+      if (currentLineItems.length > 0) {
+        currentLineItems.sort((a, b) => a.transform[4] - b.transform[4]);
+        lines.push(currentLineItems.map(it => it.str.trim()).join(' ').trim());
+      }
+
+      return lines;
+    }
+
+    // PROCESAR UN ARCHIVO PDF INDIVIDUAL CON PDF.JS (CONSTRUCCIÓN ESPACIAL)
+    async function processSinglePdf(file, index) {
+      const fileId = `pol_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 7)}`;
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Guardar DataURL en IndexedDB para descarga posterior
+        let dataUrl = '';
+        try {
+          dataUrl = await fileToDataURL(file);
+          if (dataUrl) {
+            await savePdfToDB(fileId, dataUrl);
+          }
+        } catch (storageErr) {
+          console.warn('Storage save warning:', storageErr);
+        }
+
+        const allLines = [];
+        let rawFullText = '';
+
+        if (window.pdfjsLib) {
+          const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageLines = extractLinesFromPage(textContent);
+            allLines.push(...pageLines);
+
+            const pageRawText = textContent.items.map(it => it.str).join(' ');
+            rawFullText += ' ' + pageRawText;
+          }
+        }
+
+        const extractedMeta = extractMetaAndWorkersFromLines(allLines, rawFullText, file.name, fileId);
+
+        return {
+          id: fileId,
+          file: file,
+          name: file.name,
+          size: file.size,
+          dataUrl: dataUrl,
+          extractedCount: extractedMeta.workers.length,
+          insurer: extractedMeta.insurer,
+          policy: extractedMeta.policy,
+          empresa: extractedMeta.empresa,
+          desde: extractedMeta.desde,
+          hasta: extractedMeta.hasta,
+          workers: extractedMeta.workers
+        };
+      } catch (err) {
+        console.error('Error procesando PDF individual:', file.name, err);
+        return {
+          id: fileId,
+          file: file,
+          name: file.name,
+          size: file.size,
+          dataUrl: '',
+          extractedCount: 0,
+          insurer: document.getElementById('adminAseguradora').value || 'Sanitas EPS / Protecta Security',
+          policy: document.getElementById('adminPoliza').value || 'POL-SCTR',
+          empresa: 'M&D Construcción de Redes',
+          desde: document.getElementById('adminVigenciaDesde').value,
+          hasta: document.getElementById('adminVigenciaHasta').value,
+          workers: []
+        };
+      }
+    }
+
+    // EXTRACCIÓN INTELIGENTE DE TEXTO Y TRABAJADORES (DNI Y CE)
+    function extractMetaAndWorkersFromLines(lines, rawFullText, filename, fileId) {
+      let insurer = document.getElementById('adminAseguradora').value || 'Sanitas EPS / Protecta Security';
+      let policy = document.getElementById('adminPoliza').value || 'POL-SCTR';
+      let desde = document.getElementById('adminVigenciaDesde').value || new Date().toISOString().split('T')[0];
+      let hasta = document.getElementById('adminVigenciaHasta').value || new Date().toISOString().split('T')[0];
+      let empresa = 'CONSTRUCCIÓN DE REDES M&D S.A.C.';
+
+      const combinedText = (rawFullText + ' ' + lines.join(' ')).toLowerCase();
+
+      // Detectar Aseguradora
+      if (combinedText.includes('sanitas') && combinedText.includes('protecta')) {
+        insurer = 'Sanitas EPS / Protecta Security';
+      } else if (combinedText.includes('sanitas') && combinedText.includes('crecer')) {
+        insurer = 'Sanitas EPS / Crecer Seguros';
+      } else if (combinedText.includes('sanitas')) {
+        insurer = 'Sanitas EPS';
+      } else if (combinedText.includes('positiva')) {
+        insurer = 'La Positiva Seguros';
+      } else if (combinedText.includes('rimac') || combinedText.includes('rímac')) {
+        insurer = 'Rímac Seguros';
+      } else if (combinedText.includes('pacifico') || combinedText.includes('pacífico')) {
+        insurer = 'Pacífico Seguros';
+      } else if (combinedText.includes('mapfre')) {
+        insurer = 'Mapfre Perú';
+      }
+
+      // Detectar Empresa / Contratista
+      if (combinedText.includes('tl & s solutions') || combinedText.includes('tl&s')) {
+        empresa = 'TL & S SOLUTIONS SERVICE S.A.C.';
+      } else if (combinedText.includes('isnet')) {
+        empresa = 'ISNET S.A.C.';
+      } else if (combinedText.includes('construccion de redes') || combinedText.includes('redes m&d') || combinedText.includes('m & d')) {
+        if (combinedText.includes('externo') || combinedText.includes('externos')) {
+          empresa = 'CONSTRUCCIÓN DE REDES M&D S.A.C. (EXTERNO)';
+        } else if (combinedText.includes('planilla')) {
+          empresa = 'CONSTRUCCIÓN DE REDES M&D S.A.C. (PLANILLA)';
+        } else {
+          empresa = 'CONSTRUCCIÓN DE REDES M&D S.A.C.';
+        }
+      }
+
+      // Detectar N° de Póliza / Contrato
+      const saludMatch = rawFullText.match(/(?:contrato|salud)[^\d\n\r]{0,35}(?:n[°o.]*)?\s*[:\s]*([0-9A-Z\-]{4,25})/i);
+      const pensionMatch = rawFullText.match(/(?:p[oó]liza|pensi[oó]n)[^\d\n\r]{0,35}(?:n[°o.]*)?\s*[:\s]*([0-9A-Z\-]{4,25})/i);
+
+      if (saludMatch && pensionMatch && saludMatch[1] !== pensionMatch[1]) {
+        policy = `Salud: ${saludMatch[1].trim()} | Pensión: ${pensionMatch[1].trim()}`;
+      } else if (pensionMatch) {
+        policy = pensionMatch[1].trim();
+      } else if (saludMatch) {
+        policy = saludMatch[1].trim();
+      } else {
+        const genericPol = rawFullText.match(/p[oó]liza\s*(?:n[°o.]*)?\s*[:\s]*([0-9A-Z\-]{4,25})/i);
+        if (genericPol) policy = genericPol[1].trim();
+      }
+
+      // Detectar Fechas de Vigencia
+      const dateRangeMatch = rawFullText.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})\s*(?:al|a|-|hasta)\s*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i);
+      if (dateRangeMatch) {
         const parseD = (s) => {
           const p = s.split(/[\/\-]/);
           return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
         };
         try {
-          desde = parseD(dateMatches[0]);
-          hasta = parseD(dateMatches[1]);
+          desde = parseD(dateRangeMatch[1]);
+          hasta = parseD(dateRangeMatch[2]);
         } catch(e) {}
-      }
-
-      // Detectar DNIs de 8 dígitos y nombres asociados
-      const workers = [];
-      const seenDni = new Set();
-      const words = text.split(/\s+/);
-
-      for (let i = 0; i < words.length; i++) {
-        if (/^\d{8}$/.test(words[i]) && !seenDni.has(words[i])) {
-          const dni = words[i];
-          // Evitar falsos positivos numéricos como fechas 20261001 o 20261031
-          if (dni.startsWith('202') || dni.startsWith('201')) continue;
-
-          seenDni.add(dni);
-
-          let nameCandidate = [];
-          for (let j = 1; j <= 5 && (i + j) < words.length; j++) {
-            const nextWord = words[i + j];
-            if (/^[a-zA-ZÁÉÍÓÚÑáéíóúñ]{2,}$/.test(nextWord)) {
-              nameCandidate.push(nextWord);
-            } else if (nameCandidate.length >= 2) {
-              break;
-            }
-          }
-
-          const fullName = nameCandidate.length >= 2 ? nameCandidate.join(' ').toUpperCase() : `TRABAJADOR SCTR (${dni})`;
-          
-          workers.push({
-            dni: dni,
-            nombres: fullName,
-            cargo: "TÉCNICO DE REDES",
-            aseguradora: insurer,
-            poliza: policy,
-            desde: desde,
-            hasta: hasta,
-            pdfId: fileId,
-            pdfFileName: filename
-          });
+      } else {
+        const allDates = rawFullText.match(/\d{2}[\/\-]\d{2}[\/\-]\d{4}/g);
+        if (allDates && allDates.length >= 2) {
+          const parseD = (s) => {
+            const p = s.split(/[\/\-]/);
+            return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+          };
+          try {
+            desde = parseD(allDates[0]);
+            hasta = parseD(allDates[1]);
+          } catch(e) {}
         }
       }
 
-      // Si el archivo no tiene texto digital (escaneado), precargar técnicos de muestra asociados a ese archivo
-      if (workers.length === 0) {
-        const sampleWorkers = [
-          { dni: "45892147", nombres: "MENDOZA RUIZ CARLOS ALBERTO", cargo: "TÉCNICO EMPALMADOR DE FIBRA" },
-          { dni: "71245896", nombres: "QUISPE FLORES JORGE LUIS", cargo: "TÉCNICO LINIERO / TENDIDO" },
-          { dni: "40215893", nombres: "RAMOS SALAZAR LUIS ENRIQUE", cargo: "TÉCNICO DE REDES Y ENERGÍA" },
-          { dni: "46985214", nombres: "TORRES CASTRO MANUEL ANTONIO", cargo: "TÉCNICO DE PLANTA EXTERNA" },
-          { dni: "44589632", nombres: "ALARCÓN SILVA PEDRO MIGUEL", cargo: "SUPERVISOR DE OPERACIONES" }
-        ];
+      // Extraer Técnicos por Líneas Reconstruidas Espacialmente (Nombre antes de DNI/CE)
+      const workers = [];
+      const seenDocs = new Set();
+      const headerBlacklist = /^(nro|item|nombres|apellidos|documento|asegurado|contratante|poliza|contrato|vigencia|periodo|empresa|fecha|total|subtotal|pagina|p[aá]gina|ruc|sede|titular)/i;
 
-        sampleWorkers.forEach(sw => {
-          workers.push({
-            dni: sw.dni,
-            nombres: sw.nombres,
-            cargo: sw.cargo,
-            aseguradora: insurer,
-            poliza: policy,
-            desde: desde,
-            hasta: hasta,
-            pdfId: fileId,
-            pdfFileName: filename
-          });
-        });
-      }
+      lines.forEach(line => {
+        if (!line || line.length < 5) return;
 
-      return { insurer, policy, desde, hasta, workers };
+        let docType = '';
+        let docNumber = '';
+        let nameCandidate = '';
+
+        // 1. Patrón con DNI/CE/PAS/PTP explícito
+        const docMatch = line.match(/(?:^|\s)(D\.?N\.?I\.?|C\.?E\.?|P\.?T\.?P\.?|PASAPORTE|PAS)\s*[-:\s]*([0-9A-Za-z]{6,12})(?:\s|$)/i);
+
+        if (docMatch) {
+          const rawPrefix = docMatch[1].replace(/\./g, '').toUpperCase();
+          docNumber = docMatch[2].trim();
+          docType = (rawPrefix.includes('CE') || docNumber.startsWith('00') || docNumber.length > 8) ? 'CE' : (rawPrefix.includes('PAS') ? 'PAS' : 'DNI');
+
+          // El nombre está ANTES del tipo de documento en el orden tabular normal
+          const beforeDoc = line.substring(0, docMatch.index).trim();
+          const cleanBefore = beforeDoc.replace(/^\s*\d+[\s.\-_)]+/, '').trim();
+
+          if (cleanBefore.length >= 4 && cleanBefore.split(/\s+/).length >= 2 && !headerBlacklist.test(cleanBefore)) {
+            nameCandidate = cleanBefore;
+          } else {
+            // Documento antes del nombre (orden invertido)
+            const afterDoc = line.substring(docMatch.index + docMatch[0].length).trim();
+            const cleanAfter = afterDoc.replace(/^[\s.\-_)]+/, '').trim();
+            if (cleanAfter.length >= 4 && cleanAfter.split(/\s+/).length >= 2 && !headerBlacklist.test(cleanAfter)) {
+              nameCandidate = cleanAfter;
+            }
+          }
+        } else {
+          // 2. Patrón de 8 a 10 dígitos numéricos en línea tabular
+          const numMatch = line.match(/(?:^|\s)(\d{8,10})(?:\s|$)/);
+          if (numMatch) {
+            const candidate = numMatch[1];
+            // Evitar años o rucs
+            if (!candidate.startsWith('202') && !candidate.startsWith('201')) {
+              docNumber = candidate;
+              docType = (candidate.startsWith('00') || candidate.length > 8) ? 'CE' : 'DNI';
+
+              const beforeNum = line.substring(0, numMatch.index).trim();
+              const cleanBefore = beforeNum
+                .replace(/^\s*\d+[\s.\-_)]+/, '')
+                .replace(/\b(?:D\.?N\.?I\.?|C\.?E\.?|CARNET(?:\s+DE)?\s+EXTRANJER[IÍ]A|CARNET\s+EXT\.?|P\.?T\.?P\.?|PASAPORTE|PAS)\b.*$/i, '')
+                .trim();
+              if (cleanBefore.length >= 4 && cleanBefore.split(/\s+/).length >= 2 && !headerBlacklist.test(cleanBefore)) {
+                nameCandidate = cleanBefore;
+              }
+            }
+          }
+        }
+
+        if (docNumber && nameCandidate && !seenDocs.has(docNumber)) {
+          // Normalizar nombre
+          nameCandidate = nameCandidate
+            .replace(/[^a-zA-ZÁÉÍÓÚÑáéíóúñ\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+
+          const words = nameCandidate.split(' ');
+          if (words.length >= 2 && words.every(w => w.length >= 2)) {
+            seenDocs.add(docNumber);
+            workers.push({
+              dni: docNumber,
+              tipoDoc: docType,
+              nombres: nameCandidate,
+              cargo: "TÉCNICO DE REDES",
+              empresa: empresa,
+              aseguradora: insurer,
+              poliza: policy,
+              desde: desde,
+              hasta: hasta,
+              pdfId: fileId,
+              pdfFileName: filename
+            });
+          }
+        }
+      });
+
+      // NO MOCK DATA BAJO NINGUNA CIRCUNSTANCIA
+      return { insurer, policy, empresa, desde, hasta, workers };
     }
 
     // FUSIONAR TRABAJADORES EN EL LOTE CONSOLIDADO
@@ -1761,7 +1953,6 @@
         };
 
         if (existingIdx >= 0) {
-          // Si el técnico ya estaba en este lote por otro archivo (ej: Salud y Pensión)
           const target = tempExtractedWorkers[existingIdx];
           if (!target.documents) {
             target.documents = [{
@@ -1777,6 +1968,8 @@
           if (w.hasta && (!target.hasta || w.hasta > target.hasta)) {
             target.hasta = w.hasta;
           }
+          if (!target.empresa && w.empresa) target.empresa = w.empresa;
+          if (!target.tipoDoc && w.tipoDoc) target.tipoDoc = w.tipoDoc;
         } else {
           w.documents = [docEntry];
           tempExtractedWorkers.push(w);
@@ -1945,10 +2138,12 @@
 
         const record = {
           dni: w.dni,
+          tipoDoc: w.tipoDoc || (/^(?:00|\d{9,})/.test(w.dni) ? 'CE' : 'DNI'),
           nombres: w.nombres,
           cargo: w.cargo || 'TÉCNICO DE REDES',
-          aseguradora: w.aseguradora || document.getElementById('adminAseguradora').value || 'La Positiva Seguros',
-          poliza: w.poliza || document.getElementById('adminPoliza').value || 'POL-SCTR-MD',
+          empresa: w.empresa || 'M&D CONSTRUCCIÓN DE REDES S.A.C.',
+          aseguradora: w.aseguradora || document.getElementById('adminAseguradora').value || 'Sanitas EPS / Protecta Security',
+          poliza: w.poliza || document.getElementById('adminPoliza').value || 'POL-SCTR',
           desde: w.desde || document.getElementById('adminVigenciaDesde').value,
           hasta: w.hasta || document.getElementById('adminVigenciaHasta').value,
           pdfId: w.pdfId || 'default',
@@ -1977,6 +2172,7 @@
             }
           });
           record.documents = existingDocs;
+          if (!record.empresa && existingTech.empresa) record.empresa = existingTech.empresa;
           updatedDb[existingIdx] = record;
         } else {
           updatedDb.unshift(record);
