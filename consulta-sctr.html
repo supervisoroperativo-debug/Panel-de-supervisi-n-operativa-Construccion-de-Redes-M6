@@ -653,6 +653,10 @@
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Volver al Panel
         </a>
+        <button class="btn-action" onclick="fetchSctrSpreadsheetData(true)" style="background:rgba(2,132,199,0.3); border-color:#38bdf8;" title="Actualizar datos desde Google Sheets">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Sincronizar
+        </button>
         <a href="https://drive.google.com/drive/folders/15BQ-LzbGeEMR9TBD3lrPGuAB7g-uiDeh?usp=drive_link" target="_blank" rel="noopener noreferrer" class="btn-action" style="background:rgba(16,185,129,0.22); border-color:#10b981; color:#ffffff;" title="Abrir carpeta de pólizas en Google Drive">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
           <span>Pólizas en Drive</span>
@@ -706,7 +710,7 @@
         </div>
 
         <div style="display:grid; grid-template-columns:1fr auto auto auto; gap:0.5rem; align-items:center;">
-          <input type="text" id="sctrSpreadsheetInput" class="main-input" style="padding:0.55rem 0.85rem; font-size:0.85rem; font-family:monospace;" placeholder="Ingresa ID o Enlace de tu Google Sheet de SCTR (ej: 16DXaYOtafd7o3phBfwRnivvb2o2C0AfY2ezyEDd-5w4)" />
+          <input type="text" id="sctrSpreadsheetInput" class="main-input" style="padding:0.55rem 0.85rem; font-size:0.85rem; font-family:monospace;" placeholder="ID de tu Google Sheet (ej: 1W4rU9shFI4gD884cBfPjslGhh1uB7DGO1cBALCa9OKE)" />
           <button type="button" class="btn-search" onclick="saveSctrSpreadsheetId()" style="padding:0.55rem 0.95rem; font-size:0.82rem; white-space:nowrap;">
             💾 Conectar Sheet
           </button>
@@ -1142,8 +1146,8 @@
     const SCTR_DRIVE_FOLDER_URL = 'https://drive.google.com/drive/folders/15BQ-LzbGeEMR9TBD3lrPGuAB7g-uiDeh?usp=drive_link';
 
     // CONFIGURACIÓN DE GOOGLE SHEETS PARA SCTR (Tecnología GViz, igual que Vehículos y Conductores)
-    const DEFAULT_SCTR_SPREADSHEET_ID = '';
-    let sctrSpreadsheetId = localStorage.getItem('md_sctr_spreadsheet_id') || DEFAULT_SCTR_SPREADSHEET_ID;
+    const DEFAULT_SCTR_SPREADSHEET_ID = '1W4rU9shFI4gD884cBfPjslGhh1uB7DGO1cBALCa9OKE';
+    let sctrSpreadsheetId = DEFAULT_SCTR_SPREADSHEET_ID;
 
     // Lista de DNIs de ejemplo para purgar cualquier residuo de pruebas
     const MOCK_DNIS = new Set(["45892147", "71245896", "40215893", "46985214", "44589632", "48963251", "73214589"]);
